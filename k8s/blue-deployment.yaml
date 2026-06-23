@@ -4,7 +4,7 @@ metadata:
   name: sentiment-blue-deployment
   namespace: default
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       slot: blue
@@ -22,13 +22,7 @@ spec:
           volumeMounts:
             - name: logs-volume
               mountPath: /app/logs
-          resources:
-            requests:
-              memory: "1Gi"
-              cpu: "500m"
-            limits:
-              memory: "2Gi"
-              cpu: "1000m"
+          
       volumes:
         - name: logs-volume
           persistentVolumeClaim:
