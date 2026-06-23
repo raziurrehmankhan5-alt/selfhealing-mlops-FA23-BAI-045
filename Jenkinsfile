@@ -10,7 +10,7 @@ pipeline {
     stage('Build and Run') {
       steps {
         sh 'docker build -t sentiment-test .'
-        sh 'docker run -d --name sentiment-app -pA 5000:5000 sentiment-test'
+        sh 'docker run -d --name sentiment-app -p 5000:5000 sentiment-test'
         sh 'sleep 15'
       }
     }
