@@ -22,7 +22,6 @@ spec:
           volumeMounts:
             - name: logs-volume
               mountPath: /app/logs
-          
       volumes:
         - name: logs-volume
           persistentVolumeClaim:
