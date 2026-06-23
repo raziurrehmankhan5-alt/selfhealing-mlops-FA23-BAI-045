@@ -33,7 +33,7 @@ pipeline {
                             -p 5000:5000 \
                             -v /app/logs:/app/logs \
                             ${DOCKER_IMAGE_UNSTABLE}
-                        sleep 3
+                        sleep 30
                         curl -s http://localhost:5000/health || echo "Health check pending..."
                         
                     '''
