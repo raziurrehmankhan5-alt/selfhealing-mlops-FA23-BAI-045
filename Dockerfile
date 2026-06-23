@@ -1,32 +1,27 @@
 FROM python:3.11-slim
 
-WORKDIR /app
-
-# Install system dependencies for Chromium and Selenium
 RUN apt-get update && apt-get install -y \
     chromium \
     chromium-driver \
-    wget \
-    gnupg \
-    unzip \
-    xvfb \
+    libnss3 \
     libxi6 \
-    libgconf-2-4 \
-    --no-install-recommends && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    libxrender1 \
+    libxrandr2 \
+    libxss1 \
+    libgtk-3-0 \
+    libglib2.0-0 \
+    fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+WORKDIR /app
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files
-COPY templates/ templates/
-COPY app.py .
+COPY . .
 
-# Set Chromium as headless by default
 ENV CHROME_BIN=/usr/bin/chromium
-ENV CHROMEDRIVER_BIN=/usr/bin/chromedriver
+ENV CHROMIUM_PATH=/usr/bin/chromium
 
 EXPOSE 5000
 
