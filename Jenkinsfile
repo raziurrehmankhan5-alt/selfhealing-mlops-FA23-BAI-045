@@ -1,89 +1,58 @@
 pipeline {
-    agent any
-
-    environment {
-        DOCKER_USERNAME = "fa23bai0045"
-        DOCKER_IMAGE_UNSTABLE = "${DOCKER_USERNAME}/sentiment-api:unstable"
-        DOCKER_IMAGE_STABLE = "${DOCKER_USERNAME}/sentiment-api:stable"
-        DOCKER_CREDENTIALS = credentials('dockerhub')
-        KUBECONFIG = "/home/ubuntu/.kube/config"
+  agent any
+  environment {
+    DOCKER_USER = 'fa23bai0045'
+  }
+  stages {
+    stage('Fetch') {
+      steps { checkout scm }
     }
-
-    stages {
-        stage('Fetch') {
-            steps {
-                script {
-                    checkout scm
-                    echo "Repository fetched successfully"
-                }
-            }
-        }
-
-        stage('Build and Run') {
-            steps {
-                sh 'docker build -t sentiment-test .'
-        sh 'docker run -d --name sentiment-app -p 5000:5000 sentiment-test'
+    stage('Build and Run') {
+      steps {
+        sh 'docker build -t sentiment-test .'
+        sh 'docker run -d --name sentiment-app -pA 5000:5000 sentiment-test'
         sh 'sleep 15'
-        sh "curl http://localhost:5000/health"
-            }
-        }
-
-        stage('Unit Test') {
-            steps {
-                sh 'docker run --rm --network host sentiment-test pytest tests/test_api.py -v'
-            }
-        }
-
-        stage('UI Test') {
-            steps {
-                sh 'docker run --rm --network host sentiment-test pytest tests/test_ui.py -v'
-            }
-        }
-
-        stage('Build and Push') {
-            steps {
-                script {
-                    echo "Building and pushing unstable image..."
-                    sh '''
-                        docker login -u ${DOCKER_USERNAME} -p ${DOCKER_CREDENTIALS_PSW}
-                        docker push ${DOCKER_IMAGE_UNSTABLE}
-                        docker logout
-                    '''
-                    echo "Checking out stable-fallback branch for stable image..."
-                    sh '''
-                        git checkout stable-fallback || git checkout -b stable-fallback origin/stable-fallback
-                        docker build -t ${DOCKER_IMAGE_STABLE} .
-                        docker login -u ${DOCKER_USERNAME} -p ${DOCKER_CREDENTIALS_PSW}
-                        docker push ${DOCKER_IMAGE_STABLE}
-                        docker logout
-                        git checkout main
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy to Minikube') {
-            steps {
-                script {
-                    echo "Deploying to Minikube..."
-                    sh '''
-                        # Check if minikube is running, start if not
-                        if ! minikube status | grep -q "Running"; then
-                            minikube start --driver=docker
-                        fi
-                        kubectl apply -f k8s/pvc.yaml
-                        kubectl apply -f k8s/blue-deployment.yaml
-                        kubectl apply -f k8s/green-deployment.yaml
-                        kubectl apply -f k8s/service.yaml
-                        echo "Waiting for deployments to be ready..."
-                        kubectl rollout status deployment/sentiment-blue-deployment -n default --timeout=2m
-                        kubectl rollout status deployment/sentiment-green-deployment -n default --timeout=
-                        docker rm -f sentiment-app || true
-                        echo "Deployments ready!"
-                    '''
-                }
-            }
-        }
+      }
     }
+    stage('Unit Test') {
+      steps {
+        sh 'docker run --rm --network host sentiment-test pytest tests/test_api.py -v'
+      }
+    }
+    stage('UI Test') {
+      steps {
+        sh 'docker run --rm --network host sentiment-test pytest tests/test_ui.py -v'
+      }
+    }
+    stage('Build and Push') {
+      steps {
+        withCredentials([usernamePassword(credentialsId:'dockerhub', usernameVariable:'DHUSER', passwordVariable:'DHPASS')]) {
+          sh 'echo "$DHPASS" | docker login -u "$DHUSER" --password-stdin'
+          sh 'docker build -t $DOCKER_USER/sentiment-api:unstable .'
+          sh 'git stash; git checkout stable-fallback; docker build -t $DOCKER_USER/sentiment-api:stable .; git checkout main; git stash pop || true'
+          sh 'docker push $DOCKER_USER/sentiment-api:unstable'
+          sh 'docker push $DOCKER_USER/sentiment-api:stable'
+        }
+      }
+    }
+    stage('Deploy to Minikube') {
+      steps {
+        sh '''
+            # Check if minikube is running, start if not
+            if ! minikube status | grep -q "Running"; then
+                minikube start --driver=docker
+            fi
 
+            # Always apply kubectl regardless
+            eval $(minikube docker-env)
+            kubectl apply -f k8s/pvc.yaml
+            kubectl apply -f k8s/blue-deployment.yaml
+            kubectl apply -f k8s/green-deployment.yaml
+            kubectl apply -f k8s/service.yaml
+            
+        '''
+        sh 'docker rm -f sentiment-app || true'
+      }
+    }
+  }
 }
