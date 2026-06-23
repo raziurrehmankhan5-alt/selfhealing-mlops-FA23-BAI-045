@@ -1,64 +1,47 @@
-import pytest
-import os
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+import time
 
-BASE_URL = os.getenv("BASE_URL", "http://localhost:5000")
+def test_frontend_sentiment():
 
-@pytest.fixture
-def driver():
-    """Setup headless Chrome driver."""
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
+    options = Options()
+    options.binary_location = "/usr/bin/chromium"
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     
-    driver = webdriver.Chrome(options=chrome_options)
-    yield driver
-    driver.quit()
+    driver = webdriver.Chrome(options=options)
 
-class TestUI:
 
-    def test_frontend_sentiment(self, driver):
-        """Test frontend loads, accepts input, and displays result."""
-        # Load the page
-        driver.get(f"{BASE_URL}/")
-        
-        # Find text input by exact ID
-        text_input = WebDriverWait(driver, 5).until(
-            EC.presence_of_element_located((By.ID, "text-input"))
+
+    try:
+        driver.get("http://localhost:5000")
+
+        driver.find_element(
+            By.ID,
+            "text-input"
+        ).send_keys("This is a wonderful product")
+
+        driver.find_element(
+            By.ID,
+            "submit-btn"
+        ).click()
+
+        time.sleep(3)
+
+        result = driver.find_element(
+            By.ID,
+            "result-output"
+        ).text
+
+        assert result != ""
+
+        assert (
+            "POSITIVE" in result or
+            "NEGATIVE" in result or
+            "Confidence" in result
         )
-        
-        # Find submit button by exact ID
-        submit_btn = WebDriverWait(driver, 5).until(
-            EC.presence_of_element_located((By.ID, "submit-btn"))
-        )
-        
-        # Find result output div by exact ID
-        result_output = WebDriverWait(driver, 5).until(
-            EC.presence_of_element_located((By.ID, "result-output"))
-        )
-        
-        # Send test text
-        test_text = "Spotlessly clean rooms with attentive staff and superb amenities throughout"
-        text_input.send_keys(test_text)
-        
-        # Click submit
-        submit_btn.click()
-        
-        # Wait for result to be non-empty
-        WebDriverWait(driver, 5).until(
-            lambda d: d.find_element(By.ID, "result-output").text != ""
-        )
-        
-        # Get result text
-        result_text = result_output.text
-        
-        # Assert result contains sentiment label or confidence
-        assert result_text, "Result output is empty"
-        assert "POSITIVE" in result_text or "NEGATIVE" in result_text or "Confidence" in result_text, \
-            f"Result does not contain expected sentiment or confidence: {result_text}"
+
+    finally:
+        driver.quit()
