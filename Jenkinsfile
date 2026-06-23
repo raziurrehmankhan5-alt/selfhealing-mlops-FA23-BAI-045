@@ -45,14 +45,7 @@ pipeline {
 
             # Always apply kubectl regardless
             eval $(minikube docker-env)
-            # FORCE DELETE old resources
-            kubectl delete deployment sentiment-blue-deployment --ignore-not-found=true --grace-period=0 --force
-            kubectl delete deployment sentiment-green-deployment --ignore-not-found=true --grace-period=0 --force
-            kubectl delete service sentiment-api-service --ignore-not-found=true
-            kubectl delete pvc sentiment-logs-pvc --ignore-not-found=true --grace-period=0 --force
             
-            # Wait
-            sleep 5
             
             # Apply FRESH (no cache)
             kubectl apply -f k8s/pvc.yaml
