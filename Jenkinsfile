@@ -21,23 +21,9 @@ pipeline {
 
         stage('Build and Run') {
             steps {
-                script {
-                    echo "Building Docker image for unstable app..."
-                    sh '''
-                        docker build -t ${DOCKER_IMAGE_UNSTABLE} .
-                        echo "Docker image built: ${DOCKER_IMAGE_UNSTABLE}"
-                    '''
-                    echo "Running containerized unstable app..."
-                    sh '''
-                        docker run -d --name sentiment-unstable-test \
-                            -p 5000:5000 \
-                            -v /app/logs:/app/logs \
-                            ${DOCKER_IMAGE_UNSTABLE}
-                        sleep 30
-                        curl -s http://localhost:5000/health || echo "Health check pending..."
-                        
-                    '''
-                }
+                sh 'docker build -t sentiment-test .'
+        sh 'docker run -d --name sentiment-app -p 5000:5000 sentiment-test'
+        sh 'sleep 15'
             }
         }
 
