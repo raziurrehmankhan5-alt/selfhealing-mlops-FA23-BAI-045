@@ -29,29 +29,13 @@ pipeline {
 
         stage('Unit Test') {
             steps {
-                script {
-                    echo "Running PyTest unit tests..."
-                    sh '''
-                        docker run --rm \
-                            -v ${WORKSPACE}:/app \
-                            ${DOCKER_IMAGE_UNSTABLE} \
-                            pytest tests/test_api.py -v --tb=short
-                    '''
-                }
+                sh 'docker run --rm --network host sentiment-test pytest tests/test_api.py -v'
             }
         }
 
         stage('UI Test') {
             steps {
-                script {
-                    echo "Running Selenium UI tests..."
-                    sh '''
-                        docker run --rm \
-                            -v ${WORKSPACE}:/app \
-                            ${DOCKER_IMAGE_UNSTABLE} \
-                            pytest tests/test_ui.py -v --tb=short
-                    '''
-                }
+                sh 'docker run --rm --network host sentiment-test pytest tests/test_ui.py -v'
             }
         }
 
