@@ -24,6 +24,7 @@ pipeline {
                 sh 'docker build -t sentiment-test .'
         sh 'docker run -d --name sentiment-app -p 5000:5000 sentiment-test'
         sh 'sleep 15'
+        sh "curl http://localhost:5000/health"
             }
         }
 
